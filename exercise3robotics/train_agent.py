@@ -1,10 +1,11 @@
-import numpy as np
-import tensorflow as tf
-
-# custom modules
 from utils     import Options
 from simulator import Simulator
 from transitionTable import TransitionTable
+
+import numpy as np
+import keras
+from keras.models import Sequential
+from keras.layers import Conv1D, MaxPooling1D, Flatten, Dense, Dropout, Reshape
 
 #!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 # NOTE:
@@ -20,23 +21,40 @@ trans = TransitionTable(opt.state_siz, opt.act_num, opt.hist_len,
                              opt.minibatch_size, opt.valid_size,
                              opt.states_fil, opt.labels_fil)
 
+train_data = trans.get_train()
+valid_data = trans.get_valid()
+
 # 1. train
-######################################
-# TODO implement your training here!
-# you can get the full data from the transition table like this:
-#
-# # both train_data and valid_data contain tupes of images and labels
-# train_data = trans.get_train()
-# valid_data = trans.get_valid()
-# 
-# alternatively you can get one random mini batch line this
-#
-# for i in range(number_of_batches):
-#     x, y = trans.sample_minibatch()
-# Hint: to ease loading your model later create a model.py file
-# where you define your network configuration
-######################################
+
+model = Sequential()
+
+# use data like provided as series
+model.add(Reshape((opt.state_siz * opt.hist_len, 1),
+                  input_shape=(opt.state_siz * opt.hist_len,)))
+model.add(Conv1D(8, kernel_size=64, strides=1, activation='relu'))
+model.add(MaxPooling1D(pool_size=2))
+model.add(Conv1D(16, kernel_size=32, strides=1, activation='relu'))
+model.add(MaxPooling1D(pool_size=2))
+model.add(Conv1D(32, kernel_size=16, strides=1, activation='relu'))
+model.add(MaxPooling1D(pool_size=2))
+model.add(Conv1D(32, kernel_size=8, strides=1, activation='relu'))
+model.add(MaxPooling1D(pool_size=2))
+model.add(Conv1D(32, kernel_size=4, strides=1, activation='relu'))
+model.add(MaxPooling1D(pool_size=2))
+model.add(Flatten())
+model.add(Dense(opt.act_num, activation='softmax'))
+
+model.summary()
+
+model.compile(loss=keras.losses.categorical_crossentropy,
+              optimizer=keras.optimizers.Adam(lr=0.001),
+              metrics=['accuracy'])
+
+model.fit(*train_data,
+          batch_size=64,
+          epochs=5,
+          verbose=1,
+          validation_data=valid_data)
 
 # 2. save your trained model
-
-
+model.save('model.h5')

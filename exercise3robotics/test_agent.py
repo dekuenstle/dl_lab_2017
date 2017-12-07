@@ -3,6 +3,8 @@ import matplotlib
 matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
 from random import randrange
+from keras.models import load_model
+
 # custom modules
 from utils     import Options, rgb2gray
 from simulator import Simulator
@@ -11,12 +13,11 @@ from simulator import Simulator
 opt = Options()
 sim = Simulator(opt.map_ind, opt.cub_siz, opt.pob_siz, opt.act_num)
 
-# TODO: load your agent
-# Hint: If using standard tensorflow api it helps to write your own model.py  
-# file with the network configuration, including a function model.load().
-# You can use saver = tf.train.Saver() and saver.restore(sess, filename_cpkt)
-
-agent =None
+#!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+# NOTE:
+# this script assumes you did generate your model with the train_agent.py script
+#!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+agent = load_model('model.h5')
 
 # 1. control loop
 if opt.disp_on:
@@ -30,6 +31,10 @@ action = 0     # action to take given by the network
 # start a new game
 state = sim.newGame(opt.tgt_y, opt.tgt_x)
 for step in range(opt.eval_steps):
+    # episode just started
+    if epi_step == 0:
+        full_state = np.zeros([opt.hist_len, opt.state_siz])
+        full_state[:,:] = rgb2gray(state.pob).reshape((-1,))
 
     # check if episode ended
     if state.terminal or epi_step >= opt.early_stop:
@@ -40,12 +45,11 @@ for step in range(opt.eval_steps):
         # start a new game
         state = sim.newGame(opt.tgt_y, opt.tgt_x)
     else:
-        #!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-        # TODO: here you would let your agent take its action
-        #!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-        # Hint: get the image using rgb2gray(state.pob), append latest image to a history 
-        # this just gets a random action
-        action = randrange(opt.act_num)
+        full_state = np.append(full_state, rgb2gray(state.pob).reshape((1, -1)), 0)
+        full_state = np.delete(full_state, 0, 0)
+        x = full_state.reshape(1, opt.hist_len * opt.state_siz)
+        y = agent.predict(x)
+        action = y.argmax()
         state = sim.step(action)
 
         epi_step += 1
@@ -75,4 +79,5 @@ for step in range(opt.eval_steps):
 
 # 2. calculate statistics
 print(float(nepisodes_solved) / float(nepisodes))
+
 # 3. TODO perhaps  do some additional analysis
