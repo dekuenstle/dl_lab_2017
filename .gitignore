@@ -8,3 +8,6 @@ data/
 *.synctex.gz
 *.swp
 auto/
+__pycache__/
+labels.csv
+states.csv
