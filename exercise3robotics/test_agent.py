@@ -17,7 +17,7 @@ sim = Simulator(opt.map_ind, opt.cub_siz, opt.pob_siz, opt.act_num)
 # NOTE:
 # this script assumes you did generate your model with the train_agent.py script
 #!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-agent = load_model('model.h5')
+agent = load_model(opt.model_fil)
 
 # 1. control loop
 if opt.disp_on:

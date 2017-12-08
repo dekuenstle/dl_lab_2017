@@ -9,6 +9,7 @@ class Options:
     labels_fil = "labels.csv"
     network_fil = "network.json"
     weights_fil = "network.h5"
+    model_fil = "model.h5"
     # simulator config
     disp_interval = .005
     if map_ind == 0:

@@ -51,10 +51,10 @@ model.compile(loss=keras.losses.categorical_crossentropy,
               metrics=['accuracy'])
 
 model.fit(*train_data,
-          batch_size=64,
+          batch_size=opt.minibatch_size,
           epochs=5,
           verbose=1,
           validation_data=valid_data)
 
 # 2. save your trained model
-model.save('model.h5')
+model.save(opt.model_fil)
