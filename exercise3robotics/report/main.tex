@@ -1,0 +1,48 @@
+%++++++++++++++++++++++++++++++++++++++++
+% Don't modify this section unless you know what you're doing!
+\documentclass[a4paper,14pt]{article}
+\usepackage{listings} % code blocks
+\usepackage{tabularx} % extra features for tabular environment
+\usepackage{amsmath}  % improve math presentation
+\usepackage{graphicx} % takes care of graphic including machinery
+\usepackage{subcaption} % necessary for subfigures
+\usepackage[margin=2cm,a4paper,nohead]{geometry} % decreases margins
+\usepackage{cite} % takes care of citations
+\usepackage[final]{hyperref} % adds hyper links inside the generated pdf file
+
+%++++++++++++++++++++++++++++++++++++++++
+
+
+\begin{document}
+
+\title{Exercise 3: Visual Planning with CNN}
+\author{Badhreesh, David-Elias K\"unstle}
+\date{18/12/2017}
+\pagenumbering{gobble} % turn of page numbering (not needed for 2 pages)
+\maketitle
+\section{Introduction}
+
+
+How well does your agent perform from the local view ?
+
+What happens if you increase the history length for the views or make the
+view larger ?
+
+\section{Generalization}
+\subsection{Target location}
+What happens if you change the target location after training (you can
+change it in utils.py) ?
+
+\subsection{Map}
+What happens if you change the map after training (how well does your
+agent generalize) ?
+
+\subsection{Proposal}
+Can you think of ways to make the agent generalize across target locations
+different maps ? For bonus points: test one of these ideas.
+
+
+% \begin{thebibliography}{99}
+% \end{thebibliography}
+
+\end{document}
