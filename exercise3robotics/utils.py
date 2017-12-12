@@ -12,7 +12,7 @@ class Options:
     model_fil = "model.h5"
     # simulator config
     disp_interval = .005
-    if map_ind == 0:
+    if map_ind == 0 or map_ind == 2:
         cub_siz = 5
         pob_siz = 5 # for partial observation
         # this defines the goal positionw
@@ -43,6 +43,9 @@ class Options:
     eval_steps  = early_stop * eval_nepisodes
     eval_freq   = n_minibatches # evaluate after each epoch
     prog_freq   = 500
+
+    log_tensorboard = True
+    tensorboard_log_dir = './tb_logs'
 
 class State: # return tuples made easy
     def __init__(self, action, reward, screen, terminal, pob):
