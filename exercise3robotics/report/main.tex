@@ -51,8 +51,13 @@ history and pob on the test performance.
 
 Our agent is implemented via stacked convolution layers like described in
 \autoref{tab:architecture} using the \emph{keras} library (\emph{tensorflow} backend).
+The architecture resulted via trial and error.
 As default we use the provided map in \autoref{fig:maze}, a history of 4 pob as input data
 and a fixed target position.
+We use the input history as a flat vector (1 channel) as provided.
+Experiments with reshaping to two (width, height; history as channels) or three
+(width, height, history; 1 channel) dimensions did not result in significant
+better results.
 Trained with Adam optimization (batch size $32$, learning rate $0.001$) we reach over $98\%$
 accuracy on the validation set after 5 iterations over the full training data
 (epochs).
