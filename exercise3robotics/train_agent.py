@@ -50,10 +50,17 @@ model.compile(loss=keras.losses.categorical_crossentropy,
               optimizer=keras.optimizers.Adam(lr=0.001),
               metrics=['accuracy'])
 
+callbacks = []
+if opt.log_tensorboard:
+    tensorboard_cb = keras.callbacks.TensorBoard(log_dir=opt.tensorboard_log_dir, histogram_freq=1,
+                                                 write_graph=True, write_images=True, write_grads=True)
+    callbacks.append(tensorboard_cb)
+
 model.fit(*train_data,
           batch_size=opt.minibatch_size,
           epochs=5,
           verbose=1,
+          callbacks=callbacks,
           validation_data=valid_data)
 
 # 2. save your trained model

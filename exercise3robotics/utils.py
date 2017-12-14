@@ -44,7 +44,7 @@ class Options:
     eval_freq   = n_minibatches # evaluate after each epoch
     prog_freq   = 500
 
-    log_tensorboard = True
+    log_tensorboard = False
     tensorboard_log_dir = './tb_logs'
 
 class State: # return tuples made easy
