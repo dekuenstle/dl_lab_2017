@@ -48,9 +48,37 @@ In \autoref{sec:generalization} we investigate the influence of changing target 
 history and pob on the test performance.
 
 \section{Implementation}
-\textbf{TODO: How well does your agent perform from the local view ?}
+
+Our agent is implemented via stacked convolution layers like described in
+\autoref{tab:architecture} using the \emph{keras} library (\emph{tensorflow} backend).
+As default we use the provided map in \autoref{fig:maze}, a history of 4 pob as input data
+and a fixed target position.
+Trained with Adam optimization (batch size $32$, learning rate $0.001$) we reach over $98\%$
+accuracy on the validation set after 5 iterations over the full training data
+(epochs).
+As test setup the agent usually can find the target in less than 50 steps from
+any random start position.
+
+\begin{table}[h]
+  \centering
+  \begin{tabular}{ll}
+    \hline
+    Convolution Layer & (8 filters, size 64) \\
+    Convolution Layer & (16 filters, size 32) \\
+    Convolution Layer & (32 filters, size 16) \\
+    Convolution Layer & (32 filters, size 8) \\
+    Convolution Layer & (32 filters, size 4) \\
+    Dense Layer & (5 outputs, softmax activation) \\
+    \hline
+  \end{tabular}
+  \caption{Network architecture. A convolution layer here includes ReLu
+    activation function and max pooling (size 2, stride 2).}
+  \label{tab:architecture}
+\end{table}
+
 \textbf{TODO: What happens if you increase the history length for the views or make the
 view larger ?}
+
 \section{Generalization}\label{sec:generalization}
 
 \begin{figure}
@@ -68,8 +96,8 @@ view larger ?}
         \label{fig:othermaze}
     \end{subfigure}
     \caption{The agent tries using the way it learned while training to a fixed
-      position where it expects the target. Any changes there results in
-      the agent to only move back and forth.}\label{fig:generalization}
+      position where it expects the target. Once some pob history occurs, which the agent has
+      not seen while training it is stuck by moving back and forth.}\label{fig:generalization}
 \end{figure}
 
 \subsection{Target location}
