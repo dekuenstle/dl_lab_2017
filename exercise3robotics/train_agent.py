@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 from utils     import Options
 from simulator import Simulator
 from transitionTable import TransitionTable
