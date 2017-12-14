@@ -63,6 +63,7 @@ accuracy on the validation set after 5 iterations over the full training data
 (epochs).
 As test setup the agent usually can find the target in less than 50 steps from
 any random start position.
+Subjective the agent seems to follow the shortest path directly to the target.
 
 \begin{table}[h]
   \centering
@@ -86,12 +87,16 @@ view larger ?}
 
 \section{Generalization}\label{sec:generalization}
 
+Until this point the test situation was very close to the training situation.
+Here we try, how our agent performs if the task (target position) or
+environment (walls in maze) is changed after training.
+
 \begin{figure}
     \centering
     \begin{subfigure}[b]{0.3\textwidth}
         \includegraphics[width=\textwidth]{random_target}
         \caption{randomized target position}
-        \label{fig:randomtargetmaze}
+        \label{fig:randomtarget}
     \end{subfigure}
     ~ %add desired spacing between images, e. g. ~, \quad, \qquad, \hfill etc.
       %(or a blank line to force the subfigure onto a new line)
@@ -106,8 +111,20 @@ view larger ?}
 \end{figure}
 
 \subsection{Target location}
-\textbf{TODO: What happens if you change the target location after training (you can
-change it in utils.py) ?}
+
+If the target is at the fixed position, it looks like our agent magically knows
+where it is and takes the shortest path.
+This illusion is revealed, if the target is placed on any free, random position (\autoref{fig:randomtarget}).
+The agent still moves straight to the middle of the map where the target was
+while learning. As soon as the target should appear in the pob but doesn't, the
+agent starts moving back and forth.
+Therefore it usually doesn't reach any target while testing.
+
+The target could also be placed such, that the agent has to pass it at the usual
+path. Then the agent often also starts moving back and forth.
+We could conclude, that it hasn't even learned to go to the target if it is
+visible (target is in the current pob).
+
 \subsection{Map}
 \textbf{TODO: What happens if you change the map after training (how well does your
 agent generalize) ?}
