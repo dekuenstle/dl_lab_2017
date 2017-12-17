@@ -17,15 +17,15 @@
 \begin{document}
 
 \title{Exercise 3: Visual Planning with CNNs}
-\author{Badhreesh, David-Elias K\"unstle}
+\author{Badhreesh M Rao, David-Elias K\"unstle}
 \date{18/12/2017}
 \pagenumbering{gobble} % turn of page numbering (not needed for 2 pages)
 \maketitle
 \section{Introduction}
 
 The most famous use of convolutional neural networks (CNNs) is in image classification.
-In contrast here we describe their application for a planning task from visual input.
-An agent has to find a target in a two dimensional maze of \autoref{fig:maze} from a random starting
+In contrast, here we describe their application for a planning task from visual input.
+An agent has to find a target in a two dimensional maze  (\autoref{fig:maze}) from a random starting
 position. The agent receives only partial observations (pob) of the environment.
 
 \begin{figure}[h]
@@ -37,20 +37,18 @@ position. The agent receives only partial observations (pob) of the environment.
   \label{fig:maze}
 \end{figure}
 
-At each time step the agent has to decide the direction (up, right, down, left)
-for the following discrete move by the current and some preceding pob.
+At each time step, the agent has to decide the direction (up, right, down, left)for the current timestep and some preceding pob.
 Pob and optimal directions for training and validation are generated via
 A-Star-Algorithm.
-For testing the agent has to maximize the number of successful runs.
-A run is only successful if the agent finds the target in a limited number of
-time.
-In \autoref{sec:generalization} we investigate the influence of changing target position, map,
+For testing, the agent has to maximize the number of successful runs.
+A run is only successful if the agent finds the target in a limited amount of time.
+In \autoref{sec:generalization}, we investigate the influence of changing target position, map,
 history and pob on the test performance.
 
 \section{Implementation}
 
-Our agent is implemented via stacked convolution layers like described in
-\autoref{tab:architecture} using the \emph{keras} library (\emph{tensorflow} backend).
+Our agent is implemented via stacked convolution layers as described in
+\autoref{tab:architecture} using the \emph{keras} library with \emph{tensorflow} backend.
 The architecture resulted via trial and error.
 As default we use the provided map in \autoref{fig:maze}, a history of 4 pob as input data
 and a fixed target position.
@@ -58,12 +56,13 @@ We use the input history as a flat vector (1 channel) as provided.
 Experiments with reshaping to two (width, height; history as channels) or three
 (width, height, history; 1 channel) dimensions did not result in significant
 better results.
-Trained with Adam optimization (batch size $32$, learning rate $0.001$) we reach over $98\%$
+
+\textbf{How well does the agent perform from the local view?}
+
+Trained with Adam optimization (batch size $32$, learning rate $0.001$), we reached over $98\%$
 accuracy on the validation set after 5 iterations over the full training data
 (epochs).
-As test setup the agent usually can find the target in less than 50 steps from
-any random start position.
-Subjective the agent seems to follow the shortest path directly to the target.
+In the test setup, the agent can usually find the target in less than 50 steps from any random start position. The agent seems to follow the shortest path directly to the target.
 
 \begin{table}[h]
   \centering
@@ -82,8 +81,24 @@ Subjective the agent seems to follow the shortest path directly to the target.
   \label{tab:architecture}
 \end{table}
 
-\textbf{TODO: What happens if you increase the history length for the views or make the
+\textbf{ What happens if you increase the history length for the views or make the
 view larger ?}
+
+In the original layout, the history length was set to 4. With this and other parameters set up, the agent was able to find the target easily in the testing phase. With increasing values of history length, the training time slight increases and also the testing accuracy of the agent decreases.
+This might be because if the agent is trained with a high history length, it remembers the start position and learns a path to the target.
+
+In testing, if the agent does not appear in one of those starting positions, it will not be able to reach the target. It gets stuck in the starting stage.
+In other words, the ability of the agent to generalize, or to reach its goal no matter where it appears on the map, decreases as the history length is increased.
+If the view is made larger, then it becomes easier for the agent to reach its target. For the same history length, the agent with the larger view was able to reach its target more often than the agent with the smaller view. \autoref{fig:largerview} shows the map to the left and the larger view of the agent to the right (30x30 compared to 25x25 in \autoref{fig:maze}).
+
+\begin{figure}[h]
+  \centering
+  \includegraphics[width=0.7\textwidth]{larger_view}
+  \caption{The agent (blue) now has a larger view and has to find the target (green) in the maze (left,
+    walls in red). It is only provided a history of partial observations
+    (right).}
+  \label{fig:largerview}
+\end{figure}
 
 \section{Generalization}\label{sec:generalization}
 
@@ -101,9 +116,9 @@ environment (walls in maze) is changed after training.
     ~ %add desired spacing between images, e. g. ~, \quad, \qquad, \hfill etc.
       %(or a blank line to force the subfigure onto a new line)
     \begin{subfigure}[b]{0.3\textwidth}
-        %\includegraphics[width=\textwidth]{}
+        \includegraphics[width=\textwidth]{modified_map}
         \caption{slightly modified maze}
-        \label{fig:othermaze}
+        \label{fig:modifiedmap}
     \end{subfigure}
     \caption{The agent tries using the way it learned while training to a fixed
       position where it expects the target. Once some pob history occurs, which the agent has
@@ -111,6 +126,8 @@ environment (walls in maze) is changed after training.
 \end{figure}
 
 \subsection{Target location}
+
+\textbf{What happens if you change the target location after training?}
 
 If the target is at the fixed position, it looks like our agent magically knows
 where it is and takes the shortest path.
@@ -126,13 +143,17 @@ We could conclude, that it hasn't even learned to go to the target if it is
 visible (target is in the current pob).
 
 \subsection{Map}
-\textbf{TODO: What happens if you change the map after training (how well does your
-agent generalize) ?}
-\subsection{Proposal}
-\textbf{TODO: Can you think of ways to make the agent generalize across target locations
-different maps ?}
 
-\textbf{TODO: For bonus points: test one of these ideas.}
+\textbf{What happens if you change the map after training (how well does your agent generalize) ?}
+
+If the map is changed after training (\autoref{fig:modifiedmap}), the agent does not generalize well to the new map layout in the testing phase, as it did with the map layout it was trained on.
+Basically, if the agent comes across a new obstacle in the map which it did not see before during training, it will get stuck at that place, unable to proceed to its target. But if the agent appears in places where the new obstacle does not affect its path, the agent is able to reach its goal.
+
+\subsection{Proposal}
+\textbf{Can you think of ways to make the agent generalize across target locations in different maps ?}
+
+A possible implementation of making the agent generalize across target locations in different maps would be to train the agent with training data obtained from different map and location configurations. Doing this would perhaps help the agent to generalize to situations where either the map layout or the target locations are different. 
+
 
 % \begin{thebibliography}{99}
 % \end{thebibliography}
