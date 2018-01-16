@@ -7,7 +7,7 @@ class Options:
     change_tgt = False
     states_fil = "states.csv"
     labels_fil = "labels.csv"
-    checkpoint_dir = "model_chkpnt/"
+    checkpoint_dir = "model_checkpoint/"
     # simulator config
     disp_interval = .005
     if map_ind == 0:
@@ -29,17 +29,18 @@ class Options:
         tgt_y = None
         tgt_x = None
     act_num = 5
-    policy_eps = 0.8
+    policy_eps = 1
+    policy_eps_min = 0.1
     q_loss_discount = 0.99
-    learning_rate = 0.01
+    learning_rat = 0.001
 
     # traing hyper params
     hist_len = 4
-    minibatch_size  = 32
+    minibatch_siz  = 32
     eval_nepisodes  = 10
 
-    train_interval = minibatch_size
-    eval_interval = minibatch_size
+    train_interval = minibatch_siz
+    eval_interval = minibatch_siz
 
 class State: # return tuples made easy
     def __init__(self, action, reward, screen, terminal, pob):
