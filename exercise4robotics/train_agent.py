@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 from utils     import Options, rgb2gray
 from simulator import Simulator
 from transitionTable import TransitionTable
-from model import DQLAgent, mlp_factory
+from model import DQLAgent, mlp_factory, cnn_factory
 
 def append_to_hist(state, obs):
     """
@@ -43,8 +43,8 @@ state_with_history_dim = opt.hist_len * opt.state_siz
 epi_step = 0
 nepisodes = 0
 
-q_fn =  mlp_factory(state_with_history_dim, [100, 100], opt.act_num,
-                    hidden_activation='relu', output_activation='linear')
+q_fn = cnn_factory(state_with_history_dim, filters=[8, 16, 32, 32, 32],
+                   kernels_size=[64, 32, 16, 8, 4], output_units=opt.act_num)
 model = DQLAgent(q_fn, opt.act_num, model_dir=opt.checkpoint_dir,
                  minibatch_size=opt.minibatch_siz, learning_rate=opt.learning_rat,
                  discount=opt.q_loss_discount,

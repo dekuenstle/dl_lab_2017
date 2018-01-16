@@ -39,8 +39,8 @@ class Options:
     minibatch_siz  = 32
     eval_nepisodes  = 10
 
-    train_interval = minibatch_siz
-    eval_interval = minibatch_siz
+    train_interval = 16
+    eval_interval = 64
 
 class State: # return tuples made easy
     def __init__(self, action, reward, screen, terminal, pob):
