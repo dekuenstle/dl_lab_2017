@@ -30,18 +30,19 @@ if opt.disp_on:
 
 state_with_history_dim = opt.hist_len * opt.state_siz
 epi_step = 0
-nepisodes = 0
+nepisodes = 1
 target_found_count = 0
 
 state = sim.newGame(opt.tgt_y, opt.tgt_x)
 state_with_history = np.zeros((opt.hist_len, opt.state_siz))
 append_to_hist(state_with_history, rgb2gray(state.pob).reshape(opt.state_siz))
 next_state_with_history = np.copy(state_with_history)
-while nepisodes < opt.eval_nepisodes:
-    print("step")
+while nepisodes <= opt.eval_nepisodes:
     if state.terminal:
         print("Agent reached the target!")
         target_found_count += 1
+    elif epi_step >= opt.early_stop:
+        print("Early stop, too many steps!")
     if state.terminal or epi_step >= opt.early_stop:
         epi_step = 0
         nepisodes += 1
@@ -51,7 +52,9 @@ while nepisodes < opt.eval_nepisodes:
         state_with_history[:] = 0
         append_to_hist(state_with_history, rgb2gray(state.pob).reshape(opt.state_siz))
         next_state_with_history = np.copy(state_with_history)
-        print("New episode {}".format(nepisodes))
+        print("New episode: {}".format(nepisodes))
+    epi_step += 1
+    print("  Step {}/{} (episode {}/{})".format(epi_step, opt.early_stop, nepisodes, opt.eval_nepisodes))
     action = agent.action(state_with_history.reshape(-1))
     next_state = sim.step(action)
     # append to history
