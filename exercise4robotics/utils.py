@@ -38,6 +38,7 @@ class Options:
     hist_len = 4
     minibatch_siz  = 32
     eval_nepisodes  = 10
+    steps = 1 * 10**6
 
     train = True
     train_interval = 32
