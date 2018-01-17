@@ -96,15 +96,14 @@ def cnn_factory(input_dim, filters, kernels_size, output_units,
     return _build_model
 
 class DQLAgent:
-    """ Agent learning using Q learning algorithms with neural network for Q function """
+    """ Agent learning using Q learning algorithms with neural network for Q function. """
 
     def __init__(self, q_model_fn, num_actions, model_dir=None,
-                 minibatch_size=32, learning_rate=0.001, discount=0.99,
+                 learning_rate=0.001, discount=0.99,
                  epsilon=1, epsilon_decay_interval=100000, epsilon_min=0.1):
         self.q_model_fn = q_model_fn
         self.estimator = tf.estimator.Estimator(model_fn=self._model_fn,
                                                 model_dir=model_dir, params={})
-        self.minibatch_size = minibatch_size
         self.num_actions = num_actions
         self.learning_rate = learning_rate
         self.discount = discount
@@ -117,7 +116,6 @@ class DQLAgent:
             x={'state': state_batch, 'state_next': next_state_batch,
                'action_onehot': action_batch,
                'reward': reward_batch, 'terminal': terminal_batch},
-            batch_size=self.minibatch_size,
             num_epochs=1, shuffle=True)
         return self.estimator.train(input_fn=train_input_fn)
 
@@ -148,7 +146,6 @@ class DQLAgent:
             x={'state': state_batch, 'state_next': next_state_batch,
                'action_onehot': action_batch,
                'reward': reward_batch, 'terminal': terminal_batch},
-            batch_size=self.minibatch_size,
             num_epochs=1, shuffle=False)
         return self.estimator.evaluate(input_fn=eval_input_fn)
 

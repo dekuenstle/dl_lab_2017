@@ -46,7 +46,7 @@ nepisodes = 0
 q_fn = cnn_factory(state_with_history_dim, filters=[8, 16, 32, 32, 32],
                    kernels_size=[64, 32, 16, 8, 4], output_units=opt.act_num)
 model = DQLAgent(q_fn, opt.act_num, model_dir=opt.checkpoint_dir,
-                 minibatch_size=opt.minibatch_siz, learning_rate=opt.learning_rat,
+                 learning_rate=opt.learning_rat,
                  discount=opt.q_loss_discount,
                  epsilon=opt.policy_eps, epsilon_min=opt.policy_eps_min,
                  epsilon_decay_interval=steps//2)
