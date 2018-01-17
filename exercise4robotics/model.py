@@ -116,13 +116,14 @@ class DQLAgent:
             x={'state': state_batch, 'state_next': next_state_batch,
                'action_onehot': action_batch,
                'reward': reward_batch, 'terminal': terminal_batch},
-            num_epochs=1, shuffle=True)
-        return self.estimator.train(input_fn=train_input_fn)
+	    batch_size=state_batch.shape[0], shuffle=True)
+        return self.estimator.train(input_fn=train_input_fn, steps=1)
 
     def predict(self, state_batch, predict_keys=None):
         pred_input_fn = tf.estimator.inputs.numpy_input_fn(
             x={'state': state_batch},
-            num_epochs=1, shuffle=False)
+	    batch_size=state_batch.shape[0],
+            shuffle=False)
         return self.estimator.predict(input_fn=pred_input_fn,
                                       predict_keys=predict_keys)
 
@@ -146,8 +147,8 @@ class DQLAgent:
             x={'state': state_batch, 'state_next': next_state_batch,
                'action_onehot': action_batch,
                'reward': reward_batch, 'terminal': terminal_batch},
-            num_epochs=1, shuffle=False)
-        return self.estimator.evaluate(input_fn=eval_input_fn)
+            batch_size=state_batch.shape[0], shuffle=False)
+        return self.estimator.evaluate(input_fn=eval_input_fn, steps=1)
 
     @property
     def current_epsilon(self):
