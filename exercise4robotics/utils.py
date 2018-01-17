@@ -2,7 +2,7 @@ import numpy as np
 
 class Options:
     #
-    disp_on = True # you might want to set it to False for speed
+    disp_on = False # you might want to set it to False for speed
     map_ind = 1
     change_tgt = False
     states_fil = "states.csv"
@@ -31,7 +31,7 @@ class Options:
     act_num = 5
     policy_eps = 1
     policy_eps_min = 0.1
-    q_loss_discount = 0.99
+    q_loss_discount = 0.9
     learning_rat = 0.001
 
     # traing hyper params
@@ -39,8 +39,9 @@ class Options:
     minibatch_siz  = 32
     eval_nepisodes  = 10
 
-    train_interval = 16
-    eval_interval = 64
+    train = True
+    train_interval = 32
+    eval_interval = 32
 
 class State: # return tuples made easy
     def __init__(self, action, reward, screen, terminal, pob):

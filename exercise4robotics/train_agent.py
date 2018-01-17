@@ -43,19 +43,21 @@ state_with_history_dim = opt.hist_len * opt.state_siz
 epi_step = 0
 nepisodes = 0
 
-q_fn = cnn_factory(state_with_history_dim, filters=[8, 16, 32, 32, 32],
-                   kernels_size=[64, 32, 16, 8, 4], output_units=opt.act_num)
+q_fn = cnn_factory(state_with_history_dim, filters=[8, 16, 16, 32],
+                   kernels_size=[64, 32, 16, 4], hidden_units=[],
+		   output_units=opt.act_num)
+q_fn().summary()
 model = DQLAgent(q_fn, opt.act_num, model_dir=opt.checkpoint_dir,
                  learning_rate=opt.learning_rat,
                  discount=opt.q_loss_discount,
                  epsilon=opt.policy_eps, epsilon_min=opt.policy_eps_min,
-                 epsilon_decay_interval=steps//2)
-
+                 epsilon_decay_interval=steps//opt.train_interval//2)
+start_step = model.train_step * opt.train_interval
 state = sim.newGame(opt.tgt_y, opt.tgt_x)
 state_with_history = np.zeros((opt.hist_len, opt.state_siz))
 append_to_hist(state_with_history, rgb2gray(state.pob).reshape(opt.state_siz))
 next_state_with_history = np.copy(state_with_history)
-for step in range(steps):
+for step in range(start_step, steps):
     if state.terminal or epi_step >= opt.early_stop:
         epi_step = 0
         nepisodes += 1
@@ -83,7 +85,7 @@ for step in range(steps):
     #!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     # here you train your agent
     #!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    if step % opt.train_interval == 0:
+    if opt.train and step % opt.train_interval == 0:
         model.train(*trans.sample_minibatch())
 
     # every once in a while you test your agent here so that you can track its performance
@@ -106,5 +108,7 @@ for step in range(steps):
 
 
 # 2. perform a final test of your model and save it
+eval_results = model.evaluate(*trans.sample_minibatch())
+print("loss {:.4f}".format(eval_results['loss']))
 # Checkpoint of model ist stored automatically while training.
 print("Latest model checkpoint stored in {}.".format(model.latest_checkpoint()))

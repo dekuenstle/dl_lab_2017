@@ -66,16 +66,19 @@ def mlp_factory(input_dim, hidden_units, output_units,
         return model
     return _build_model
 
-def cnn_factory(input_dim, filters, kernels_size, output_units,
-                output_activation='linear'):
+def cnn_factory(input_dim, filters, kernels_size, output_units, hidden_units=[],
+		conv_activation='relu', dense_activation='relu', output_activation='linear'):
     """ Build model representing Q(s) function with multiple convolutional layers
-        and a dense layer at the end.
+        and a dense layers at the end.
 
     Args:
       input_dim: Number of input units.
       filters: List of filter number in convolution layers.
       kernel_size: List of kernel size in convolution layers.
       output_units: Number of units in output layer.
+      hidden_units: List of hidden layer unit numbers of dense layers.
+      conv_activation: Activation function of convolution layers. Default: 'relu'.
+      output_activation: Activation function of dense layers. Default: 'relu'.
       output_activation: Activation function of output layer. Default: 'linear'.
 
     Returns:
@@ -91,6 +94,9 @@ def cnn_factory(input_dim, filters, kernels_size, output_units,
             max_layer = klayers.MaxPooling1D(pool_size=2)
             model.add(max_layer)
         model.add(klayers.Flatten())
+        for u in hidden_units:
+            hidden_layer = klayers.Dense(u, activation='relu')
+            model.add(hidden_layer)
         model.add(klayers.Dense(output_units, activation=output_activation))
         return model
     return _build_model
@@ -135,7 +141,7 @@ class DQLAgent:
         return action
 
     def action(self, state):
-        if self._get_global_step() < 1:
+        if self.train_step < 1:
             # Workaround: before first training, prediction fails
             return self._epsilon_greedy(None)
         else:
@@ -154,9 +160,10 @@ class DQLAgent:
     def current_epsilon(self):
         return max(self.epsilon_min,
                    self.epsilon - (self.epsilon - self.epsilon_min)
-                   * self._get_global_step() / self.epsilon_decay_interval)
+                   * self.train_step / self.epsilon_decay_interval)
 
-    def _get_global_step(self):
+    @property
+    def train_step(self):
         try:
             return self.estimator.get_variable_value('global_step:0')
         except ValueError:
