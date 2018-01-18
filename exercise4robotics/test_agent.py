@@ -29,23 +29,17 @@ if opt.disp_on:
     win_pob = None
 
 state_with_history_dim = opt.hist_len * opt.state_siz
-epi_step = 0
+epi_step = 1
 nepisodes = 1
 target_found_count = 0
 
+print("Agent following eps-greedy policy with eps={:.2f}".format(agent.current_epsilon))
 state = sim.newGame(opt.tgt_y, opt.tgt_x)
 state_with_history = np.zeros((opt.hist_len, opt.state_siz))
 append_to_hist(state_with_history, rgb2gray(state.pob).reshape(opt.state_siz))
 next_state_with_history = np.copy(state_with_history)
 while nepisodes <= opt.eval_nepisodes:
-    if state.terminal:
-        print("Agent reached the target!")
-        target_found_count += 1
-    elif epi_step >= opt.early_stop:
-        print("Early stop, too many steps!")
-    if state.terminal or epi_step >= opt.early_stop:
-        epi_step = 0
-        nepisodes += 1
+    if epi_step == 1:
         # reset the game
         state = sim.newGame(opt.tgt_y, opt.tgt_x)
         # and reset the history
@@ -53,7 +47,6 @@ while nepisodes <= opt.eval_nepisodes:
         append_to_hist(state_with_history, rgb2gray(state.pob).reshape(opt.state_siz))
         next_state_with_history = np.copy(state_with_history)
         print("New episode: {}".format(nepisodes))
-    epi_step += 1
     print("  Step {}/{} (episode {}/{})".format(epi_step, opt.early_stop, nepisodes, opt.eval_nepisodes))
     action = agent.action(state_with_history.reshape(-1))
     next_state = sim.step(action)
@@ -62,6 +55,17 @@ while nepisodes <= opt.eval_nepisodes:
     # add to the transition table
     state_with_history = np.copy(next_state_with_history)
     state = next_state
+
+    if state.terminal or epi_step >= opt.early_stop:
+        if state.terminal:
+            print("Agent reached the target!")
+            target_found_count += 1
+        else:
+            print("Early stop, too many steps!")
+        epi_step = 1
+        nepisodes += 1
+    else:
+        epi_step += 1
 
     if opt.disp_on:
         if win_all is None:
