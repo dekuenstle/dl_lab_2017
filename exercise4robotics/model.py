@@ -170,6 +170,10 @@ class DQLAgent:
             # Workaround: before first training, prediction fails
             return 0
 
+    @property
+    def latest_checkpoint():
+        return self.estimator.latest_checkpoint()
+
     def _epsilon_greedy(self, action):
         if random() < self.current_epsilon:
             return randrange(self.num_actions)

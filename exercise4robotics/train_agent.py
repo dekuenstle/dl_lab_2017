@@ -100,4 +100,4 @@ for step in range(start_step, opt.steps):
 eval_results = agent.evaluate(*trans.sample_minibatch())
 print("loss {:.4f}".format(eval_results['loss']))
 # Checkpoint of agent ist stored automatically while training.
-print("Latest agent checkpoint stored in {}.".format(agent.latest_checkpoint()))
+print("Latest agent checkpoint stored in {}.".format(agent.latest_checkpoint))
