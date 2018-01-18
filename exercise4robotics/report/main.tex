@@ -4,6 +4,10 @@
 \usepackage{listings} % code blocks
 \usepackage{tabularx} % extra features for tabular environment
 \usepackage{amsmath}  % improve math presentation
+\usepackage{algorithm} % floating algorithm environment for pseudocode
+\usepackage{algorithmicx} % prettier  pseudocode
+\usepackage[noend]{algpseudocode}
+
 \usepackage{graphicx} % takes care of graphic including machinery
 \graphicspath{{figures/}}
 \usepackage{subcaption} % necessary for subfigures
@@ -21,11 +25,137 @@
 \date{22/01/2018}
 \pagenumbering{gobble} % turn of page numbering (not needed for 2 pages)
 \maketitle
-\section{Q-Learning}
-\subsection{Update Rule}
-\subsection{Grid World}
-\section{Deep Q-Learning}
+\section{Q-Learning}\label{sec:q-learning}
+\subsection{Update Rule}\label{sec:update-rule}
+\subsection{Grid World}\label{sec:grid-world}
+\section{Deep Q-Learning}\label{sec:deep-q-learning}
 
+Applications of Q-learning beyond a toy example like
+in~\autoref{sec:grid-world} is not possible using a lookup table representing
+$Q(s, a)$.
+Due to the course of dimensionality, the table becomes infeasible large for
+bigger state-action-space.
+
+An major development is, representing $Q(s, a)$ in a compressed, continuous
+format by a \textit{function approximator}.
+In the report of \textit{Exercise 3} we showed, that a supervised, convolutional
+deep network can map an a state history in a maze task to probabilities, recommending
+the best action to choose for reaching a target state.
+
+Here we present an online learning solution to the maze task without
+pregenerated teacher data.
+The agent is learning of rewards remembered from exploration and exploitation of the environment using
+\textit{Q-learning} (\autoref{sec:update-rule}).
+A convolutional network similar to the one in \textit{Exercise 3} is used, here
+representing the state-action-value $Q(s, a)~\forall a$
+ instead of the action-probability $Pr(a|s)~\forall a$.
+
+\subsection{Maze Task}
+
+Similar to \textit{Exercise 3} an agent is spawned at a random position in a
+discrete 2d maze. The agent can change the position by choosing \textit{up, down, left, right, stay}
+actions according to a policy and a history of states (local maze cutouts).
+For each movement the agent receives a small punishment (negative reward, $r=-0.04$), if it tries to move on
+a wall it receives a big punishment ($r=-1$) and stays.
+Only for moving to the fix positioned goal state in the middle of the maze, the
+agent receives positive reward ($r=1$).
+From time to time some of the past transition information (\textit{state,
+  action, next state, reward}) are used, to improve the agent's policy.
+
+\begin{algorithm}
+  \begin{algorithmic}
+    \ForAll{$t \in \texttt{steps}$}
+      \State $\texttt{action}_t \gets \texttt{agent.policy(state}_{t-n, \cdots, t})$
+    \State $\texttt{state}_{t+1}, \texttt{reward} \gets \texttt{maze.act(action}_t\texttt{)}$
+    \State $\texttt{memory.store(state}_t, \texttt{action}_t, \texttt{state}_{t+1}, \texttt{reward)}$
+    \If {$t \in \texttt{learnsteps}$}
+    \State $\texttt{statebatch, actionbatch, nextstatebatch, rewardbatch} \gets \texttt{memory.samplebatch()}$
+      \State $\texttt{agent.learn(statebatch, actionbatch, nextstatebatch, rewardbatch)}$
+      \EndIf
+      \If {$\texttt{maze.episodesteps} > \texttt{earlystop}~\textbf{or}~\texttt{state}_t \in \texttt{terminal}$}
+        \State $\texttt{maze.newepisode()}$
+      \EndIf
+    \EndFor
+  \end{algorithmic}
+  \caption{Agent learns finding a target in a maze while exploration and exploitation (Pseudocode).}
+  \label{alg:train}
+\end{algorithm}
+
+\subsection{Agent}
+
+The agent we use for solving the maze task should learn from scratch to reach
+the target as fast a possible by exploration of the environment.
+Therefore the agent builds up an estimation of the reward until reaching the
+target for being in a state and choosing an action ($Q$\textit{-learning},
+$Q(s,a)$) by the perceived reward of a state transition.
+
+The $Q$-function is represented as a convolutional network (\autoref{tab:architecture}).
+
+\begin{table}[h]
+  \centering
+  \begin{tabular}{ll}
+    \hline
+    Convolution Layer & (8 filters, size 64) \\
+    Convolution Layer & (16 filters, size 32) \\
+    Convolution Layer & (16 filters, size 16) \\
+    Convolution Layer & (32 filters, size 4) \\
+    Dense Layer & (5 outputs, linear activation) \\
+    \hline
+  \end{tabular}
+  \caption{Network architecture. A convolution layer here includes ReLu
+    activation function and max pooling (size 2, stride 2).}
+  \label{tab:architecture}
+\end{table}
+
+\subsubsection*{Policy}
+
+Each step in the environment, the agent chooses the next action according to an
+$\epsilon$\textit{-greedy policy}.
+Therefore by a probability of $\epsilon$ a random action is used to explore new
+transitions in the environment, else we greedily follow the
+$Q$-value by $\arg \max_a Q(s, a)$.
+
+At the beginning of training where we assume $Q$ to be a bad estimation of the
+remaining cost we always explore ($\epsilon = 1$).
+To focus training to useful paths, we want to reduce exploration while the
+$Q$-value estimation improves.
+Therefore we linearly reduce $\epsilon$ to $0.1$ while the first half of
+training steps.
+
+\subsubsection*{Training}
+
+The estimation of the $Q$-function can be improved similar to supervised
+training of an network, using backpropagation and a
+\textit{sum-of-square-differences loss}.
+However the difference is not between a $Q(s,a)$ and a true $Q^*(s,a)$.
+We don't know $Q^*$, wherefore use observed transition reward to get at least a
+slightly better estimation of $Q(s,a)$ like in the Q-learning formula in
+\autoref{sec:update-rule}.
+Therefore we could also call the loss \autoref{eq:loss} \textit{sum-of-square-temporal-differences
+loss}.
+
+\begin{equation*}
+  \label{eq:loss}
+  L = \sum_i(Q(s_i, a_i) - (r + \gamma \cdot \max_{a'}Q(s_i', a_i')))^2
+\end{equation*}
+
+\subsection{Evaluation}
+
+While training without any teacher data we had no direct measurement of the agents
+performance. Still the loss was an indication of the progress.
+A loss close to zero indicates, that the $Q(s, a)$ value converged close to the
+true $Q^*(s, a)$.
+In the beginning, the loss increased to several thousand per batch. Still, after
+several then thousand environment steps (over one thousand training steps)
+the loss became two-digit and finally smaller than one.
+
+Finally we test the trained agent in the maze task without training with an low
+exploration rate ($\epsilon = 0.1$).
+Of $100$ episodes, the agent reached the target $96$ times before an early stop
+($75$ steps).
+In visual inspection of the episodes we see, that if the agent gets stuck, it usually gets
+stuck in the lower left corner. We assume that the $Q$-function not close to
+$Q^*$ for these states, because they weren't trained enough.
 
 % \begin{thebibliography}{99}
 % \end{thebibliography}
