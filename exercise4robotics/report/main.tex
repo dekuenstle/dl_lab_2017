@@ -27,7 +27,46 @@
 \maketitle
 \section{Q-Learning}\label{sec:q-learning}
 \subsection{Update Rule}\label{sec:update-rule}
+Given a transition from state \textit{i} to state \textit{j}, using action \textit{u} and
+observing immediate reward \textit{r(i,u)}, the update rule for Q-Learning would be:
+
+\begin{equation*}
+ Q(i,u) = Q(i,u) + \alpha(r(i,u) + \gamma(\max_{u}Q(j,u) - Q(i,u))
+\end{equation*} 
+
+where $\alpha$ is the learning rate and $\gamma$ is the discount factor. To handle transitions
+to or within the goal state, one can set a loop with maximum reward(in this case, 0)for the goal
+state, so that the agent remains there forever.
 \subsection{Grid World}\label{sec:grid-world}
+The zero-initialized $Q$-function is represented as a zero matrix of size \textit{(9 $\times$ 4)}, 
+where $9$ is the number of states(in this case, the cells in the grid world) and $4$ is the
+number of possible actions the agent can take. The order of actions in the columns will be up, down, left, right.
+The grid world has been named columnwise from A-I, such that the goal state will be named as $G$. After following
+the episode, the following Q-values will be updated in the matrix:
+
+\begin{equation*}
+ Q(A,down), Q(B,right), Q(E,up), Q(E,right), Q(H,up)
+\end{equation*}
+
+The improved $Q$ matrix after this initial episode will be:
+$$
+Q(s,a)
+=
+\begin{bmatrix}
+0&\fbox{-1}&0&0\\
+0&0&0&\fbox{-1}\\
+0&0&0&0\\
+0&0&0&0\\
+\fbox{-1}&0&0&\fbox{-1}\\
+0&0&0&0\\
+0&0&0&0\\
+\fbox{0}&0&0&0\\
+0&0&0&0\\
+\end{bmatrix}
+\quad
+$$
+
+The boxed values are the Q-values that were updated during this episode. 
 \section{Deep Q-Learning}\label{sec:deep-q-learning}
 
 Applications of Q-learning beyond a toy example like
@@ -36,30 +75,30 @@ $Q(s, a)$.
 Due to the course of dimensionality, the table becomes infeasible large for
 bigger state-action-space.
 
-An major development is, representing $Q(s, a)$ in a compressed, continuous
-format by a \textit{function approximator}.
-In the report of \textit{Exercise 3} we showed, that a supervised, convolutional
-deep network can map an a state history in a maze task to probabilities, recommending
+A major development is, representing $Q(s, a)$ in a compressed, continuous
+format by using a \textit{function approximator}.
+In the report of \textit{Exercise 3}, we showed, that a supervised, convolutional
+deep network can map a state history in a maze task to probabilities, recommending
 the best action to choose for reaching a target state.
 
 Here we present an online learning solution to the maze task without
-pregenerated teacher data.
+pregenerated training data.
 The agent is learning of rewards remembered from exploration and exploitation of the environment using
 \textit{Q-learning} (\autoref{sec:update-rule}).
 A convolutional network similar to the one in \textit{Exercise 3} is used, here
 representing the state-action-value $Q(s, a)~\forall a$
- instead of the action-probability $Pr(a|s)~\forall a$.
+ instead of the action-probability $P(a|s)~\forall a$.
 
 \subsection{Maze Task}
 
-Similar to \textit{Exercise 3} an agent is spawned at a random position in a
+Similar to \textit{Exercise 3}, an agent is spawned at a random position in a
 discrete 2d maze. The agent can change the position by choosing \textit{up, down, left, right, stay}
 actions according to a policy and a history of states (local maze cutouts).
 For each movement the agent receives a small punishment (negative reward, $r=-0.04$), if it tries to move on
 a wall it receives a big punishment ($r=-1$) and stays.
 Only for moving to the fix positioned goal state in the middle of the maze, the
 agent receives positive reward ($r=1$).
-From time to time some of the past transition information (\textit{state,
+From time to time, some of the past transition information (\textit{state,
   action, next state, reward}) are used, to improve the agent's policy.
 
 \begin{algorithm}
@@ -84,7 +123,7 @@ From time to time some of the past transition information (\textit{state,
 \subsection{Agent}
 
 The agent we use for solving the maze task should learn from scratch to reach
-the target as fast a possible by exploration of the environment.
+the target as fast as possible by exploration of the environment.
 Therefore the agent builds up an estimation of the reward until reaching the
 target for being in a state and choosing an action ($Q$\textit{-learning},
 $Q(s,a)$) by the perceived reward of a state transition.
@@ -115,11 +154,10 @@ Therefore by a probability of $\epsilon$ a random action is used to explore new
 transitions in the environment, else we greedily follow the
 $Q$-value by $\arg \max_a Q(s, a)$.
 
-At the beginning of training where we assume $Q$ to be a bad estimation of the
-remaining cost we always explore ($\epsilon = 1$).
+At the beginning of training where we assume $Q$ to be a bad estimation of the cost, we always explore ($\epsilon = 1$).
 To focus training to useful paths, we want to reduce exploration while the
 $Q$-value estimation improves.
-Therefore we linearly reduce $\epsilon$ to $0.1$ while the first half of
+Therefore we linearly reduce $\epsilon$ to $0.1$ after the first half of
 training steps.
 
 \subsubsection*{Training}
@@ -128,7 +166,7 @@ The estimation of the $Q$-function can be improved similar to supervised
 training of an network, using backpropagation and a
 \textit{sum-of-square-differences loss}.
 However the difference is not between a $Q(s,a)$ and a true $Q^*(s,a)$.
-We don't know $Q^*$, wherefore use observed transition reward to get at least a
+Since we don't know $Q^*(s,a)$, we use the observed transition reward to get at least a
 slightly better estimation of $Q(s,a)$ like in the Q-learning formula in
 \autoref{sec:update-rule}.
 Therefore we could also call the loss \autoref{eq:loss} \textit{sum-of-square-temporal-differences
@@ -141,20 +179,20 @@ loss}.
 
 \subsection{Evaluation}
 
-While training without any teacher data we had no direct measurement of the agents
-performance. Still the loss was an indication of the progress.
+While training without any training data, we have no direct measurement of the agents
+performance. The loss was the only indication of the agent's progress.
 A loss close to zero indicates, that the $Q(s, a)$ value converged close to the
 true $Q^*(s, a)$.
 In the beginning, the loss increased to several thousand per batch. Still, after
-several then thousand environment steps (over one thousand training steps)
-the loss became two-digit and finally smaller than one.
+several thousand environment steps (over one thousand training steps)
+the loss came down to two-digits and finally smaller than one.
 
-Finally we test the trained agent in the maze task without training with an low
+Finally we test the trained agent in the maze task, with a low
 exploration rate ($\epsilon = 0.1$).
-Of $100$ episodes, the agent reached the target $96$ times before an early stop
+Out of $100$ episodes, the agent reached the target $96$ times before an early stop
 ($75$ steps).
 In visual inspection of the episodes we see, that if the agent gets stuck, it usually gets
-stuck in the lower left corner. We assume that the $Q$-function not close to
+stuck in the lower left corner. We assume that the $Q$-function is not close to
 $Q^*$ for these states, because they weren't trained enough.
 
 % \begin{thebibliography}{99}
