@@ -31,7 +31,7 @@ Given a transition from state \textit{i} to state \textit{j}, using action \text
 observing immediate reward \textit{r(i,u)}, the update rule for Q-Learning would be:
 
 \begin{equation*}
- Q(i,u) = Q(i,u) + \alpha(r(i,u) + \gamma(\max_{u}Q(j,u) - Q(i,u))
+ Q(i,u) = Q(i,u) + \alpha(r(i,u) + \gamma\max_{u'}Q(j,u') - Q(i,u))
 \end{equation*} 
 
 where $\alpha$ is the learning rate and $\gamma$ is the discount factor. To handle transitions
@@ -66,7 +66,7 @@ Q(s,a)
 \quad
 $$
 
-The boxed values are the Q-values that were updated during this episode. 
+The boxed values are the Q-values that were updated during this episode.
 \section{Deep Q-Learning}\label{sec:deep-q-learning}
 
 Applications of Q-learning beyond a toy example like
