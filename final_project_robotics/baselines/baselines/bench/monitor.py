@@ -84,6 +84,23 @@ class Monitor(Wrapper):
     def get_episode_lengths(self):
         return self.episode_lengths
 
+    def get_state(self):
+         return {
+             'env_id': self.env.unwrapped.spec.id,
+             'episode_data': {
+                 'episode_rewards': self.episode_rewards,
+                 'episode_lengths': self.episode_lengths,
+                 'initial_reset_time': 0,
+             }
+         }
+
+    def set_state(self, state):
+         assert state['env_id'] == self.env.unwrapped.spec.id
+         ed = state['episode_data']
+         self.episode_rewards = ed['episode_rewards']
+         self.episode_lengths = ed['episode_lengths']
+
+
 class LoadMonitorResultsError(Exception):
     pass
 

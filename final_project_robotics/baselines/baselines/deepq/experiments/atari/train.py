@@ -22,7 +22,6 @@ from baselines.common.misc_util import (
 )
 from baselines.common.schedules import LinearSchedule, PiecewiseSchedule
 from baselines import bench
-from baselines.common.atari_wrappers_deprecated import wrap_dqn
 from baselines.common.azure_utils import Container
 from .model import model, dueling_model
 
@@ -63,7 +62,7 @@ def parse_args():
 def make_env(game_name):
     env = gym.make(game_name + "NoFrameskip-v4")
     monitored_env = bench.Monitor(env, logger.get_dir())  # puts rewards and number of steps in info, before environment is wrapped
-    env = wrap_dqn(monitored_env)  # applies a bunch of modification to simplify the observation space (downsample, make b/w)
+    env = deepq.wrap_atari_dqn(monitored_env)  # applies a bunch of modification to simplify the observation space (downsample, make b/w)
     return env, monitored_env
 
 
@@ -211,6 +210,9 @@ if __name__ == '__main__':
             action = act(np.array(obs)[None], update_eps=update_eps, **kwargs)[0]
             reset = False
             new_obs, rew, done, info = env.step(action)
+            rewards = monitored_env.get_episode_rewards()
+            steps = monitored_env.get_total_steps()
+
             replay_buffer.add(obs, action, rew, new_obs, float(done))
             obs = new_obs
             if done:
@@ -238,30 +240,30 @@ if __name__ == '__main__':
                 update_target()
 
             if start_time is not None:
-                steps_per_iter.update(info['steps'] - start_steps)
+                steps_per_iter.update(steps - start_steps)
                 iteration_time_est.update(time.time() - start_time)
-            start_time, start_steps = time.time(), info["steps"]
+            start_time, start_steps = time.time(), steps
 
             # Save the model and training state.
-            if num_iters > 0 and (num_iters % args.save_freq == 0 or info["steps"] > args.num_steps):
+            if num_iters > 0 and (num_iters % args.save_freq == 0 or steps > args.num_steps):
                 maybe_save_model(savedir, container, {
                     'replay_buffer': replay_buffer,
                     'num_iters': num_iters,
                     'monitor_state': monitored_env.get_state(),
                 })
 
-            if info["steps"] > args.num_steps:
+            if steps > args.num_steps:
                 break
 
             if done:
-                steps_left = args.num_steps - info["steps"]
-                completion = np.round(info["steps"] / args.num_steps, 1)
+                steps_left = args.num_steps - steps
+                completion = np.round(steps / args.num_steps, 1)
 
                 logger.record_tabular("% completion", completion)
-                logger.record_tabular("steps", info["steps"])
+                logger.record_tabular("steps", steps)
                 logger.record_tabular("iters", num_iters)
-                logger.record_tabular("episodes", len(info["rewards"]))
-                logger.record_tabular("reward (100 epi mean)", np.mean(info["rewards"][-100:]))
+                logger.record_tabular("episodes", len(rewards))
+                logger.record_tabular("reward (100 epi mean)", np.mean(rewards[-100:]))
                 logger.record_tabular("exploration", exploration.value(num_iters))
                 if args.prioritized:
                     logger.record_tabular("max priority", replay_buffer._max_priority)

@@ -12,7 +12,6 @@ from baselines.common.misc_util import (
     boolean_flag,
 )
 from baselines import bench
-from baselines.common.atari_wrappers_deprecated import wrap_dqn
 from baselines.deepq.experiments.atari.model import model, dueling_model
 
 
@@ -30,12 +29,12 @@ def parse_args():
 
 def make_env(game_name):
     env = gym.make(game_name + "NoFrameskip-v4")
-    env = bench.Monitor(env, None)
-    env = wrap_dqn(env)
-    return env
+    monitored_env = bench.Monitor(env, None)
+    env = deepq.wrap_atari_dqn(env)
+    return env, monitored_env
 
 
-def play(env, act, stochastic, video_path):
+def play(env, m_env, act, stochastic, video_path):
     num_episodes = 0
     video_recorder = None
     video_recorder = VideoRecorder(
@@ -48,23 +47,24 @@ def play(env, act, stochastic, video_path):
         obs, rew, done, info = env.step(action)
         if done:
             obs = env.reset()
-        if len(info["rewards"]) > num_episodes:
-            if len(info["rewards"]) == 1 and video_recorder.enabled:
+        rewards = m_env.get_episode_rewards()
+        if len(rewards) > num_episodes:
+            if len(rewards) == 1 and video_recorder.enabled:
                 # save video of first episode
                 print("Saved video.")
                 video_recorder.close()
                 video_recorder.enabled = False
-            print(info["rewards"][-1])
-            num_episodes = len(info["rewards"])
+            print(rewards[-1])
+            num_episodes = len(rewards)
 
 
 if __name__ == '__main__':
     with U.make_session(4) as sess:
         args = parse_args()
-        env = make_env(args.env)
+        env, m_env = make_env(args.env)
         act = deepq.build_act(
             make_obs_ph=lambda name: U.Uint8Input(env.observation_space.shape, name=name),
             q_func=dueling_model if args.dueling else model,
             num_actions=env.action_space.n)
         U.load_state(os.path.join(args.model_dir, "saved"))
-        play(env, act, args.stochastic, args.video)
+        play(env, m_env, act, args.stochastic, args.video)
