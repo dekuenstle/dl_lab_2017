@@ -10,7 +10,7 @@ Use these commands in your command line interface (*shell*).
 ```
 # Download the repository and open this folder. 
 git clone https://github.com/dekuenstle/dl_lab_2017.git
-cd dl_lab_2017/final
+cd dl_lab_2017/final_project_robotics
 
 # Install the (extended) baselines package.
 cd baselines
@@ -35,7 +35,7 @@ After training, you can enjoy the trained agent playing the game and store a vid
 
 ```
 # Get latest model
-LATEST_MODEL=$(ls -d models/model-* | sort -V | tail -n1)
+LATEST_MODEL=$(ls -vd models/model-* | tail -n1)
 echo "${LATEST_MODEL}"
 
 # Enjoy agent and record.

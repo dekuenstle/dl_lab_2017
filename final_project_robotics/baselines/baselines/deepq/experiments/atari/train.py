@@ -210,8 +210,6 @@ if __name__ == '__main__':
             action = act(np.array(obs)[None], update_eps=update_eps, **kwargs)[0]
             reset = False
             new_obs, rew, done, info = env.step(action)
-            rewards = monitored_env.get_episode_rewards()
-            steps = monitored_env.get_total_steps()
 
             replay_buffer.add(obs, action, rew, new_obs, float(done))
             obs = new_obs
@@ -239,6 +237,7 @@ if __name__ == '__main__':
             if num_iters % args.target_update_freq == 0:
                 update_target()
 
+            steps = monitored_env.get_total_steps()
             if start_time is not None:
                 steps_per_iter.update(steps - start_steps)
                 iteration_time_est.update(time.time() - start_time)
@@ -259,11 +258,12 @@ if __name__ == '__main__':
                 steps_left = args.num_steps - steps
                 completion = np.round(steps / args.num_steps, 1)
 
+                episode_rewards = monitored_env.get_episode_rewards()
                 logger.record_tabular("% completion", completion)
                 logger.record_tabular("steps", steps)
                 logger.record_tabular("iters", num_iters)
-                logger.record_tabular("episodes", len(rewards))
-                logger.record_tabular("reward (100 epi mean)", np.mean(rewards[-100:]))
+                logger.record_tabular("episodes", len(episode_rewards))
+                logger.record_tabular("reward (100 epi mean)", np.mean(episode_rewards[-100:]))
                 logger.record_tabular("exploration", exploration.value(num_iters))
                 if args.prioritized:
                     logger.record_tabular("max priority", replay_buffer._max_priority)
