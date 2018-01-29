@@ -30,7 +30,7 @@ def parse_args():
 def make_env(game_name):
     env = gym.make(game_name + "NoFrameskip-v4")
     monitored_env = bench.Monitor(env, None)
-    env = deepq.wrap_atari_dqn(env)
+    env = deepq.wrap_atari_dqn(monitored_env)
     return env, monitored_env
 
 
@@ -46,7 +46,7 @@ def play(env, m_env, act, stochastic, video_path):
         action = act(np.array(obs)[None], stochastic=stochastic)[0]
         obs, rew, done, info = env.step(action)
         if done:
-            obs = env.reset()
+            obs = env.reset(); print("done", rewards)
         rewards = m_env.get_episode_rewards()
         if len(rewards) > num_episodes:
             if len(rewards) == 1 and video_recorder.enabled:
