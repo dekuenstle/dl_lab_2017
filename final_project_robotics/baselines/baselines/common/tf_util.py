@@ -326,6 +326,13 @@ def wndense(x, size, name, init_scale=1.0):
 def densenobias(x, size, name, weight_init=None):
     return dense(x, size, name, weight_init=weight_init, bias=False)
 
+def dense_noisy_net_layer(x, size, name, weight_init=None, bias=True):
+    # TODO: Implement according to http://arxiv.org/abs/1706.10295
+    #       and add docstring
+    # mainly eq.6
+    # but initialization according to eq. 7,8 + Appendix B
+    raise NotImplementedError("")
+
 def dropout(x, pkeep, phase=None, mask=None):
     mask = tf.floor(pkeep + tf.random_uniform(tf.shape(x))) if mask is None else mask
     if phase is None:

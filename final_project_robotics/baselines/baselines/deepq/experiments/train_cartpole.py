@@ -21,6 +21,7 @@ def main():
         exploration_fraction=0.1,
         exploration_final_eps=0.02,
         print_freq=10,
+        noisy_net=True,
         callback=callback
     )
     print("Saving model to cartpole_model.pkl")

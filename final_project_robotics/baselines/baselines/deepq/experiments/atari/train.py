@@ -256,10 +256,10 @@ if __name__ == '__main__':
 
             if done:
                 steps_left = args.num_steps - steps
-                completion = np.round(steps / args.num_steps, 1)
+                completion = np.round(steps / args.num_steps, 2)
 
                 episode_rewards = monitored_env.get_episode_rewards()
-                logger.record_tabular("% completion", completion)
+                logger.record_tabular("% completion", int(100 * completion))
                 logger.record_tabular("steps", steps)
                 logger.record_tabular("iters", num_iters)
                 logger.record_tabular("episodes", len(episode_rewards))

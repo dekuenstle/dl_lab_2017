@@ -1,12 +1,16 @@
 import tensorflow as tf
 import tensorflow.contrib.layers as layers
 
+from baselines.common.tf_util import dense_noisy_net_layer
 
-def _mlp(hiddens, inpt, num_actions, scope, reuse=False, layer_norm=False):
+def _mlp(hiddens, inpt, num_actions, scope, reuse=False, layer_norm=False, noisy_net=False):
     with tf.variable_scope(scope, reuse=reuse):
         out = inpt
-        for hidden in hiddens:
-            out = layers.fully_connected(out, num_outputs=hidden, activation_fn=None)
+        for i, hidden in enumerate(hiddens):
+            if noisy_net:
+                out = dense_noisy_net_layer(out, hidden, "dense_noisy{}".format(i))
+            else:
+                out = layers.fully_connected(out, num_outputs=hidden, activation_fn=None)
             if layer_norm:
                 out = layers.layer_norm(out, center=True, scale=True)
             out = tf.nn.relu(out)
@@ -30,7 +34,8 @@ def mlp(hiddens=[], layer_norm=False):
     return lambda *args, **kwargs: _mlp(hiddens, layer_norm=layer_norm, *args, **kwargs)
 
 
-def _cnn_to_mlp(convs, hiddens, dueling, inpt, num_actions, scope, reuse=False, layer_norm=False):
+def _cnn_to_mlp(convs, hiddens, dueling, inpt, num_actions, scope,
+                reuse=False, layer_norm=False, noisy_net=False):
     with tf.variable_scope(scope, reuse=reuse):
         out = inpt
         with tf.variable_scope("convnet"):
@@ -43,8 +48,11 @@ def _cnn_to_mlp(convs, hiddens, dueling, inpt, num_actions, scope, reuse=False, 
         conv_out = layers.flatten(out)
         with tf.variable_scope("action_value"):
             action_out = conv_out
-            for hidden in hiddens:
-                action_out = layers.fully_connected(action_out, num_outputs=hidden, activation_fn=None)
+            for i, hidden in enumerate(hiddens):
+                if noisy_net:
+                    action_out = dense_noisy_net_layer(action_out, hidden, "dense_noisy_{}".format(i))
+                else:
+                    action_out = layers.fully_connected(action_out, num_outputs=hidden, activation_fn=None)
                 if layer_norm:
                     action_out = layers.layer_norm(action_out, center=True, scale=True)
                 action_out = tf.nn.relu(action_out)
@@ -53,6 +61,8 @@ def _cnn_to_mlp(convs, hiddens, dueling, inpt, num_actions, scope, reuse=False, 
         if dueling:
             with tf.variable_scope("state_value"):
                 state_out = conv_out
+                if noisy_net:
+                    raise NotImplementedError("Noisy network not implemented for dueling.")
                 for hidden in hiddens:
                     state_out = layers.fully_connected(state_out, num_outputs=hidden, activation_fn=None)
                     if layer_norm:

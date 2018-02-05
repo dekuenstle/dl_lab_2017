@@ -279,8 +279,64 @@ def build_act_with_param_noise(make_obs_ph, q_func, num_actions, scope="deepq", 
         return act
 
 
+def build_act_with_noisy_net(make_obs_ph, q_func, num_actions, scope="deepq", reuse=None):
+    """Creates the act function:
+
+    Parameters
+    ----------
+    make_obs_ph: str -> tf.placeholder or TfInput
+        a function that take a name and creates a placeholder of input with that name
+    q_func: (tf.Variable, int, str, bool) -> tf.Variable
+        the model that takes the following inputs:
+            observation_in: object
+                the output of observation placeholder
+            num_actions: int
+                number of actions
+            scope: str
+            reuse: bool
+                should be passed to outer variable scope
+        and returns a tensor of shape (batch_size, num_actions) with values of every action.
+    num_actions: int
+        number of actions.
+    scope: str or VariableScope
+        optional scope for variable_scope.
+    reuse: bool or None
+        whether or not the variables should be reused. To be able to reuse the scope must be given.
+
+    Returns
+    -------
+    act: (tf.Variable, bool, float) -> tf.Variable
+        function to select and action given observation.
+`       See the top of the file for details.
+    """
+    # TODO build activation function without epsilon greedy but noisy network
+    raise NotImplementedError()
+    with tf.variable_scope(scope, reuse=reuse):
+        observations_ph = U.ensure_tf_input(make_obs_ph("observation"))
+        stochastic_ph = tf.placeholder(tf.bool, (), name="stochastic")
+        update_eps_ph = tf.placeholder(tf.float32, (), name="update_eps")
+
+        eps = tf.get_variable("eps", (), initializer=tf.constant_initializer(0))
+
+        q_values = q_func(observations_ph.get(), num_actions, scope="q_func", noisy_net=True)
+        deterministic_actions = tf.argmax(q_values, axis=1)
+
+        batch_size = tf.shape(observations_ph.get())[0]
+        random_actions = tf.random_uniform(tf.stack([batch_size]), minval=0, maxval=num_actions, dtype=tf.int64)
+        chose_random = tf.random_uniform(tf.stack([batch_size]), minval=0, maxval=1, dtype=tf.float32) < eps
+        stochastic_actions = tf.where(chose_random, random_actions, deterministic_actions)
+
+        output_actions = tf.cond(stochastic_ph, lambda: stochastic_actions, lambda: deterministic_actions)
+        update_eps_expr = eps.assign(tf.cond(update_eps_ph >= 0, lambda: update_eps_ph, lambda: eps))
+        act = U.function(inputs=[observations_ph, stochastic_ph, update_eps_ph],
+                         outputs=output_actions,
+                         givens={update_eps_ph: -1.0, stochastic_ph: True},
+                         updates=[update_eps_expr])
+        return act
+
 def build_train(make_obs_ph, q_func, num_actions, optimizer, grad_norm_clipping=None, gamma=1.0,
-    double_q=True, scope="deepq", reuse=None, param_noise=False, param_noise_filter_func=None):
+                double_q=True, scope="deepq", reuse=None, param_noise=False, param_noise_filter_func=None,
+                noisy_net=False):
     """Creates the train function:
 
     Parameters
@@ -319,6 +375,8 @@ def build_train(make_obs_ph, q_func, num_actions, optimizer, grad_norm_clipping=
     param_noise_filter_func: tf.Variable -> bool
         function that decides whether or not a variable should be perturbed. Only applicable
         if param_noise is True. If set to None, default_param_noise_filter is used by default.
+    noisy_net: bool
+        whether or not to use noisy networks for exploration (http://arxiv.org/abs/1706.10295)
 
     Returns
     -------
@@ -337,6 +395,8 @@ def build_train(make_obs_ph, q_func, num_actions, optimizer, grad_norm_clipping=
     if param_noise:
         act_f = build_act_with_param_noise(make_obs_ph, q_func, num_actions, scope=scope, reuse=reuse,
             param_noise_filter_func=param_noise_filter_func)
+    elif noisy_net:
+        act_f = build_act_with_noisy_net(make_obs_ph, q_func, num_actions, scope=scope, reuse=reuse)
     else:
         act_f = build_act(make_obs_ph, q_func, num_actions, scope=scope, reuse=reuse)
 

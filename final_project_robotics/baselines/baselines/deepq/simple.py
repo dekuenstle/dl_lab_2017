@@ -96,6 +96,7 @@ def learn(env,
           prioritized_replay_beta_iters=None,
           prioritized_replay_eps=1e-6,
           param_noise=False,
+          noisy_net=False,
           callback=None):
     """Train a deepq model.
 
@@ -152,6 +153,8 @@ def learn(env,
         to 1.0. If set to None equals to max_timesteps.
     prioritized_replay_eps: float
         epsilon to add to the TD errors when updating priorities.
+    noisy_net: bool
+        whether or not to use noisy networks for exploration (http://arxiv.org/abs/1706.10295)
     callback: (locals, globals) -> None
         function called at every steps with state of the algorithm.
         If callback returns true training stops.
@@ -179,6 +182,7 @@ def learn(env,
         num_actions=env.action_space.n,
         optimizer=tf.train.AdamOptimizer(learning_rate=lr),
         gamma=gamma,
+        noisy_net=noisy_net,
         grad_norm_clipping=10,
         param_noise=param_noise
     )
@@ -203,9 +207,12 @@ def learn(env,
         replay_buffer = ReplayBuffer(buffer_size)
         beta_schedule = None
     # Create the schedule for exploration starting from 1.
-    exploration = LinearSchedule(schedule_timesteps=int(exploration_fraction * max_timesteps),
-                                 initial_p=1.0,
-                                 final_p=exploration_final_eps)
+    if not noisy_net:
+        exploration = LinearSchedule(schedule_timesteps=int(exploration_fraction * max_timesteps),
+                                     initial_p=1.0,
+                                     final_p=exploration_final_eps)
+    else:
+        exploration = None
 
     # Initialize the parameters and copy them to the target network.
     U.initialize()
@@ -224,11 +231,10 @@ def learn(env,
                     break
             # Take action and update exploration to the newest value
             kwargs = {}
-            if not param_noise:
-                update_eps = exploration.value(t)
-                update_param_noise_threshold = 0.
-            else:
-                update_eps = 0.
+            if not param_noise and not noisy_net:
+                kwargs['update_eps'] = exploration.value(t)
+            elif param_noise:
+                kwargs['update_eps'] = 0
                 # Compute the threshold such that the KL divergence between perturbed and non-perturbed
                 # policy is comparable to eps-greedy exploration with eps = exploration.value(t).
                 # See Appendix C.1 in Parameter Space Noise for Exploration, Plappert et al., 2017
@@ -237,7 +243,9 @@ def learn(env,
                 kwargs['reset'] = reset
                 kwargs['update_param_noise_threshold'] = update_param_noise_threshold
                 kwargs['update_param_noise_scale'] = True
-            action = act(np.array(obs)[None], update_eps=update_eps, **kwargs)[0]
+
+            action = act(np.array(obs)[None], **kwargs)[0]
+
             env_action = action
             reset = False
             new_obs, rew, done, _ = env.step(env_action)
@@ -274,7 +282,8 @@ def learn(env,
                 logger.record_tabular("steps", t)
                 logger.record_tabular("episodes", num_episodes)
                 logger.record_tabular("mean 100 episode reward", mean_100ep_reward)
-                logger.record_tabular("% time spent exploring", int(100 * exploration.value(t)))
+                if exploration is not None:
+                    logger.record_tabular("% time spent exploring", int(100 * exploration.value(t)))
                 logger.dump_tabular()
 
             if (checkpoint_freq is not None and t > learning_starts and
