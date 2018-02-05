@@ -1,6 +1,6 @@
 # DQL with NoisyNet
 
-This folder contains an extension of the [OpenAI baselines Deep Q-Learning (d8cce2309f)](https://github.com/openai/baselines/tree/d8cce2309f3765bf55c46e4ffe4722406f412275) implementing [NoisyNet](https://arxiv.org/pdf/1706.10295.pdf) as an replacement of $\epsilon$ -greedy exploration policy.
+This folder contains an extension of the [OpenAI baselines Deep Q-Learning](https://github.com/openai/baselines/8d03102d4dce8f5a64843492f5bd2c052251651b) implementing [NoisyNet](https://arxiv.org/pdf/1706.10295.pdf) as an replacement of $\epsilon$ -greedy exploration policy.
 
 ## Installation
 

@@ -152,11 +152,11 @@ if __name__ == '__main__':
             param_noise=args.param_noise
         )
 
-        approximate_num_iters = args.num_steps / 4
+        approximate_num_iters = args.num_steps / 1
         exploration = PiecewiseSchedule([
-            (0, 1.0),
-            (approximate_num_iters / 50, 0.1),
-            (approximate_num_iters / 5, 0.01)
+	              (0, 1.0),
+                      (approximate_num_iters / 50, 0.1),
+                      (approximate_num_iters / 5, 0.01)
         ], outside_value=0.01)
 
         if args.prioritized:
