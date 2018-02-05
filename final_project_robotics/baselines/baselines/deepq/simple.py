@@ -12,7 +12,8 @@ from baselines import logger
 from baselines.common.schedules import LinearSchedule
 from baselines import deepq
 from baselines.deepq.replay_buffer import ReplayBuffer, PrioritizedReplayBuffer
-from baselines.deepq.utils import BatchInput, load_state, save_state
+from baselines.deepq.utils import load_state, save_state
+from baselines.common.tf_util import BatchInput
 
 
 class ActWrapper(object):
@@ -234,13 +235,14 @@ def learn(env,
             kwargs = {}
             if not param_noise and not noisy_net:
                 kwargs['update_eps'] = exploration.value(t)
+                update_param_noise_threshold = 0.
             elif param_noise:
-                kwargs['update_eps'] = 0
                 # Compute the threshold such that the KL divergence between perturbed and non-perturbed
                 # policy is comparable to eps-greedy exploration with eps = exploration.value(t).
                 # See Appendix C.1 in Parameter Space Noise for Exploration, Plappert et al., 2017
                 # for detailed explanation.
                 update_param_noise_threshold = -np.log(1. - exploration.value(t) + exploration.value(t) / float(env.action_space.n))
+                kwargs['update_eps'] = 0
                 kwargs['reset'] = reset
                 kwargs['update_param_noise_threshold'] = update_param_noise_threshold
                 kwargs['update_param_noise_scale'] = True

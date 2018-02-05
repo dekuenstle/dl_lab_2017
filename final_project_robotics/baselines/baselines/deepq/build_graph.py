@@ -220,7 +220,8 @@ def build_act_with_param_noise(make_obs_ph, q_func, num_actions, scope="deepq", 
         q_values = q_func(observations_ph.get(), num_actions, scope="q_func")
 
         # Perturbable Q used for the actual rollout.
-        q_values_perturbed = q_func(observations_ph.get(), num_actions, scope="perturbed_q_func")
+        q_values_perturbed = q_func(observations_ph.get(), num_actions,
+                                    scope="perturbed_q_func")
         # We have to wrap this code into a function due to the way tf.cond() works. See
         # https://stackoverflow.com/questions/37063952/confused-by-the-behavior-of-tf-cond for
         # a more detailed discussion.
@@ -243,7 +244,8 @@ def build_act_with_param_noise(make_obs_ph, q_func, num_actions, scope="deepq", 
         # Set up functionality to re-compute `param_noise_scale`. This perturbs yet another copy
         # of the network and measures the effect of that perturbation in action space. If the perturbation
         # is too big, reduce scale of perturbation, otherwise increase.
-        q_values_adaptive = q_func(observations_ph.get(), num_actions, scope="adaptive_q_func")
+        q_values_adaptive = q_func(observations_ph.get(), num_actions,
+                                   scope="adaptive_q_func")
         perturb_for_adaption = perturb_vars(original_scope="q_func", perturbed_scope="adaptive_q_func")
         kl = tf.reduce_sum(tf.nn.softmax(q_values) * (tf.log(tf.nn.softmax(q_values)) - tf.log(tf.nn.softmax(q_values_adaptive))), axis=-1)
         mean_kl = tf.reduce_mean(kl)
@@ -282,7 +284,7 @@ def build_act_with_param_noise(make_obs_ph, q_func, num_actions, scope="deepq", 
 
 
 def build_act_with_noisy_net(make_obs_ph, q_func, num_actions, scope="deepq", reuse=None):
-    """Creates the act function:
+    """Creates the act function for noisy net :
 
     Parameters
     ----------
@@ -311,29 +313,18 @@ def build_act_with_noisy_net(make_obs_ph, q_func, num_actions, scope="deepq", re
         function to select and action given observation.
 `       See the top of the file for details.
     """
-    # TODO build activation function without epsilon greedy but noisy network
-    raise NotImplementedError()
     with tf.variable_scope(scope, reuse=reuse):
-        observations_ph = U.ensure_tf_input(make_obs_ph("observation"))
-        stochastic_ph = tf.placeholder(tf.bool, (), name="stochastic")
-        update_eps_ph = tf.placeholder(tf.float32, (), name="update_eps")
+        observations_ph = make_obs_ph("observation")
 
-        eps = tf.get_variable("eps", (), initializer=tf.constant_initializer(0))
+        # update_eps_ph = tf.placeholder(tf.float32, (), name="update_eps")
 
-        q_values = q_func(observations_ph.get(), num_actions, scope="q_func", noisy_net=True)
-        deterministic_actions = tf.argmax(q_values, axis=1)
-
-        batch_size = tf.shape(observations_ph.get())[0]
-        random_actions = tf.random_uniform(tf.stack([batch_size]), minval=0, maxval=num_actions, dtype=tf.int64)
-        chose_random = tf.random_uniform(tf.stack([batch_size]), minval=0, maxval=1, dtype=tf.float32) < eps
-        stochastic_actions = tf.where(chose_random, random_actions, deterministic_actions)
-
-        output_actions = tf.cond(stochastic_ph, lambda: stochastic_actions, lambda: deterministic_actions)
-        update_eps_expr = eps.assign(tf.cond(update_eps_ph >= 0, lambda: update_eps_ph, lambda: eps))
-        act = U.function(inputs=[observations_ph, stochastic_ph, update_eps_ph],
+        q_values = q_func(observations_ph.get(), num_actions, scope="q_func",
+                          noisy_net=True)
+        output_actions = tf.argmax(q_values, axis=1)
+        act = U.function(inputs=[observations_ph],
                          outputs=output_actions,
-                         givens={update_eps_ph: -1.0, stochastic_ph: True},
-                         updates=[update_eps_expr])
+                         givens={},
+                         updates=[])
         return act
 
 def build_train(make_obs_ph, q_func, num_actions, optimizer, grad_norm_clipping=None, gamma=1.0,
@@ -398,7 +389,8 @@ def build_train(make_obs_ph, q_func, num_actions, optimizer, grad_norm_clipping=
         act_f = build_act_with_param_noise(make_obs_ph, q_func, num_actions, scope=scope, reuse=reuse,
             param_noise_filter_func=param_noise_filter_func)
     elif noisy_net:
-        act_f = build_act_with_noisy_net(make_obs_ph, q_func, num_actions, scope=scope, reuse=reuse)
+        act_f = build_act_with_noisy_net(make_obs_ph, q_func, num_actions, 
+                                         scope=scope, reuse=reuse)
     else:
         act_f = build_act(make_obs_ph, q_func, num_actions, scope=scope, reuse=reuse)
 
@@ -412,11 +404,13 @@ def build_train(make_obs_ph, q_func, num_actions, optimizer, grad_norm_clipping=
         importance_weights_ph = tf.placeholder(tf.float32, [None], name="weight")
 
         # q network evaluation
-        q_t = q_func(obs_t_input.get(), num_actions, scope="q_func", reuse=True)  # reuse parameters from act
-        q_func_vars = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, scope=tf.get_variable_scope().name + "/q_func")
+        q_t = q_func(obs_t_input.get(), num_actions, scope="q_func",
+                     reuse=True, noisy_net=noisy_net)  # reuse parameters from act
+        q_func_vars = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES,
+                                        scope=tf.get_variable_scope().name + "/q_func")
 
         # target q network evalution
-        q_tp1 = q_func(obs_tp1_input.get(), num_actions, scope="target_q_func")
+        q_tp1 = q_func(obs_tp1_input.get(), num_actions, scope="target_q_func", noisy_net=noisy_net)
         target_q_func_vars = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, scope=tf.get_variable_scope().name + "/target_q_func")
 
         # q scores for actions which we know were selected in the given state.
@@ -424,7 +418,9 @@ def build_train(make_obs_ph, q_func, num_actions, optimizer, grad_norm_clipping=
 
         # compute estimate of best possible value starting from state at t + 1
         if double_q:
-            q_tp1_using_online_net = q_func(obs_tp1_input.get(), num_actions, scope="q_func", reuse=True)
+            q_tp1_using_online_net = q_func(obs_tp1_input.get(), num_actions, 
+                                            scope="q_func", reuse=True, 
+                                            noisy_net=noisy_net)
             q_tp1_best_using_online_net = tf.argmax(q_tp1_using_online_net, 1)
             q_tp1_best = tf.reduce_sum(q_tp1 * tf.one_hot(q_tp1_best_using_online_net, num_actions), 1)
         else:

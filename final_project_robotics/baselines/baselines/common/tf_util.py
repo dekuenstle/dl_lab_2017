@@ -48,6 +48,10 @@ def huber_loss(x, delta=1.0):
 # Global session
 # ================================================================
 
+def get_session():
+    """Returns recently made Tensorflow session"""
+    return tf.get_default_session()
+
 def make_session(num_cpu=None, make_default=False):
     """Returns a session that will use <num_cpu> CPU's only"""
     if num_cpu is None:
@@ -120,13 +124,119 @@ def conv2d(x, num_filters, name, filter_size=(3, 3), stride=(1, 1), pad="SAME", 
 
         return tf.nn.conv2d(x, w, stride_shape, pad) + b
 
-def dense_noisy_net_layer(x, size, name, weight_init=None, bias=True):
-    # TODO: Implement according to http://arxiv.org/abs/1706.10295
-    #       and add docstring
-    # mainly eq.6
-    # but initialization according to eq. 7,8 + Appendix B
-    raise NotImplementedError("")
+def dense_noisy_net_layer(x, size, name, sigma0=0.4):
+    """ Dense noisy network layer using factorized gaussian noise.
 
+        See http://arxiv.org/abs/1706.10295
+            esp. Eq.6,7,8 Appendix B
+    """
+    input_size = x.shape.as_list()[1]
+    f = lambda x: tf.sign(x) * tf.sqrt(tf.abs(x))
+    eps_row = tf.random_normal([size, 1])           # (q, 1)
+    eps_col = tf.random_normal([1, input_size])     # (1, p)
+
+    f_row, f_col = f(eps_row), f(eps_col)           # (q, 1), (1, p)
+    eps_w = tf.matmul(f_row, f_col)                 # (q, p)
+    eps_b = tf.squeeze(tf.transpose(f_row))                    # (1, q)
+    
+    uniform_init = tf.random_uniform_initializer(minval=-1 / np.sqrt(input_size),
+                                                 maxval=+1 / np.sqrt(input_size))
+    constant_init = tf.constant_initializer(sigma0 / np.sqrt(input_size))
+    mu_w = tf.get_variable(name + '/w/mu', 
+                           [size, input_size],      # (q, p)
+                           initializer=uniform_init)
+    sigma_w = tf.get_variable(name + '/w/sigma', 
+                              [size, input_size],   # (q, p)
+                              initializer=constant_init)
+    mu_b = tf.get_variable(name + '/b/mu', 
+                           [size],                  # (None, q)
+                           initializer=uniform_init)
+    sigma_b = tf.get_variable(name + '/b/sigma', 
+                              [size],               # (None, q)
+                              initializer=constant_init)
+
+    w = mu_w + tf.multiply(sigma_w, eps_w)          # (q, p)
+    b = mu_b + tf.multiply(sigma_b, eps_b)          # (None, q)
+    y = tf.matmul(x, tf.transpose(w)) + b           # (None, q)
+    return y
+
+
+# ================================================================
+# Placeholders
+# ================================================================
+
+
+def is_placeholder(x):
+    return type(x) is tf.Tensor and len(x.op.inputs) == 0
+
+
+class TfInput(object):
+    def __init__(self, name="(unnamed)"):
+        """Generalized Tensorflow placeholder. The main differences are:
+            - possibly uses multiple placeholders internally and returns multiple values
+            - can apply light postprocessing to the value feed to placeholder.
+        """
+        self.name = name
+
+    def get(self):
+        """Return the tf variable(s) representing the possibly postprocessed value
+        of placeholder(s).
+        """
+        raise NotImplemented()
+
+    def make_feed_dict(data):
+        """Given data input it to the placeholder(s)."""
+        raise NotImplemented()
+
+
+class PlaceholderTfInput(TfInput):
+    def __init__(self, placeholder):
+        """Wrapper for regular tensorflow placeholder."""
+        super().__init__(placeholder.name)
+        self._placeholder = placeholder
+
+    def get(self):
+        return self._placeholder
+
+    def make_feed_dict(self, data):
+        return {self._placeholder: data}
+
+class BatchInput(PlaceholderTfInput):
+    def __init__(self, shape, dtype=tf.float32, name=None):
+        """Creates a placeholder for a batch of tensors of a given shape and dtype
+
+        Parameters
+        ----------
+        shape: [int]
+            shape of a single elemenet of the batch
+        dtype: tf.dtype
+            number representation used for tensor contents
+        name: str
+            name of the underlying placeholder
+        """
+        super().__init__(tf.placeholder(dtype, [None] + list(shape), name=name))
+
+class Uint8Input(PlaceholderTfInput):
+    def __init__(self, shape, name=None):
+        """Takes input in uint8 format which is cast to float32 and divided by 255
+        before passing it to the model.
+
+        On GPU this ensures lower data transfer times.
+
+        Parameters
+        ----------
+        shape: [int]
+            shape of the tensor.
+        name: str
+            name of the underlying placeholder
+        """
+
+        super().__init__(tf.placeholder(tf.uint8, [None] + list(shape), name=name))
+        self._shape = shape
+        self._output = tf.cast(super().get(), tf.float32) / 255.0
+
+    def get(self):
+        return self._output
 
 # ================================================================
 # Theano-like Function
@@ -174,32 +284,49 @@ def function(inputs, outputs, updates=None, givens=None):
 
 
 class _Function(object):
-    def __init__(self, inputs, outputs, updates, givens):
+    def __init__(self, inputs, outputs, updates, givens, check_nan=False):
         for inpt in inputs:
-            if not hasattr(inpt, 'make_feed_dict') and not (type(inpt) is tf.Tensor and len(inpt.op.inputs) == 0):
-                assert False, "inputs should all be placeholders, constants, or have a make_feed_dict method"
+            if not issubclass(type(inpt), TfInput):
+                assert len(inpt.op.inputs) == 0, "inputs should all be placeholders of baselines.common.TfInput"
         self.inputs = inputs
         updates = updates or []
         self.update_group = tf.group(*updates)
         self.outputs_update = list(outputs) + [self.update_group]
         self.givens = {} if givens is None else givens
+        self.check_nan = check_nan
 
     def _feed_input(self, feed_dict, inpt, value):
-        if hasattr(inpt, 'make_feed_dict'):
+        if issubclass(type(inpt), TfInput):
             feed_dict.update(inpt.make_feed_dict(value))
-        else:
+        elif is_placeholder(inpt):
             feed_dict[inpt] = value
 
-    def __call__(self, *args):
+    def __call__(self, *args, **kwargs):
         assert len(args) <= len(self.inputs), "Too many arguments provided"
         feed_dict = {}
         # Update the args
         for inpt, value in zip(self.inputs, args):
             self._feed_input(feed_dict, inpt, value)
+        # Update the kwargs
+        kwargs_passed_inpt_names = set()
+        for inpt in self.inputs[len(args):]:
+            inpt_name = inpt.name.split(':')[0]
+            inpt_name = inpt_name.split('/')[-1]
+            assert inpt_name not in kwargs_passed_inpt_names, \
+                "this function has two arguments with the same name \"{}\", so kwargs cannot be used.".format(inpt_name)
+            if inpt_name in kwargs:
+                kwargs_passed_inpt_names.add(inpt_name)
+                self._feed_input(feed_dict, inpt, kwargs.pop(inpt_name))
+            else:
+                assert inpt in self.givens, "Missing argument " + inpt_name
+        assert len(kwargs) == 0, "Function got extra arguments " + str(list(kwargs.keys()))
         # Update feed dict with givens.
         for inpt in self.givens:
             feed_dict[inpt] = feed_dict.get(inpt, self.givens[inpt])
-        results = tf.get_default_session().run(self.outputs_update, feed_dict=feed_dict)[:-1]
+        results = get_session().run(self.outputs_update, feed_dict=feed_dict)[:-1]
+        if self.check_nan:
+            if any(np.isnan(r).any() for r in results):
+                raise RuntimeError("Nan detected")
         return results
 
 # ================================================================
@@ -269,3 +396,72 @@ def get_placeholder_cached(name):
 
 def flattenallbut0(x):
     return tf.reshape(x, [-1, intprod(x.get_shape().as_list()[1:])])
+
+
+
+# ================================================================
+# Scopes
+# ================================================================
+
+
+def scope_vars(scope, trainable_only=False):
+    """
+    Get variables inside a scope
+    The scope can be specified as a string
+    Parameters
+    ----------
+    scope: str or VariableScope
+        scope in which the variables reside.
+    trainable_only: bool
+        whether or not to return only the variables that were marked as trainable.
+    Returns
+    -------
+    vars: [tf.Variable]
+        list of variables in `scope`.
+    """
+    return tf.get_collection(
+        tf.GraphKeys.TRAINABLE_VARIABLES if trainable_only else tf.GraphKeys.GLOBAL_VARIABLES,
+        scope=scope if isinstance(scope, str) else scope.name
+    )
+
+
+def scope_name():
+    """Returns the name of current scope as a string, e.g. deepq/q_func"""
+    return tf.get_variable_scope().name
+
+
+def absolute_scope_name(relative_scope_name):
+    """Appends parent scope name to `relative_scope_name`"""
+    return scope_name() + "/" + relative_scope_name
+
+
+def lengths_to_mask(lengths_b, max_length):
+    """
+    Turns a vector of lengths into a boolean mask
+    Args:
+        lengths_b: an integer vector of lengths
+        max_length: maximum length to fill the mask
+    Returns:
+        a boolean array of shape (batch_size, max_length)
+        row[i] consists of True repeated lengths_b[i] times, followed by False
+    """
+    lengths_b = tf.convert_to_tensor(lengths_b)
+    assert lengths_b.get_shape().ndims == 1
+    mask_bt = tf.expand_dims(tf.range(max_length), 0) < tf.expand_dims(lengths_b, 1)
+    return mask_bt
+
+
+def in_session(f):
+    @functools.wraps(f)
+    def newfunc(*args, **kwargs):
+        with tf.Session():
+            f(*args, **kwargs)
+    return newfunc
+
+
+def reset():
+    global _PLACEHOLDER_CACHE
+    global VARIABLES
+    _PLACEHOLDER_CACHE = {}
+    VARIABLES = {}
+    tf.reset_default_graph()
