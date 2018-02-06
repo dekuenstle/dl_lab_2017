@@ -26,7 +26,7 @@ def run_config(env_name, run_name, **kwargs):
             env,
             q_func=model,
             lr=1e-3,
-            max_timesteps=100000,
+            max_timesteps=500000,
             buffer_size=50000,
             exploration_fraction=0.1,
             exploration_final_eps=0.02,
@@ -34,8 +34,6 @@ def run_config(env_name, run_name, **kwargs):
             callback=callback,
             **kwargs
         )
-        print("Saving model to MountainCar_model.pkl")
-        act.save("MountainCar_model.pkl")
 
 
 if __name__ == '__main__':
