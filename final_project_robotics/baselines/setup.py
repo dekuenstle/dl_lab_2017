@@ -10,7 +10,7 @@ setup(name='baselines',
       packages=[package for package in find_packages()
                 if package.startswith('baselines')],
       install_requires=[
-          'gym[mujoco,atari,classic_control]',
+          'gym[atari,classic_control]',
           'scipy',
           'tqdm',
           'joblib',
@@ -19,6 +19,7 @@ setup(name='baselines',
           'azure==1.0.3',
           'progressbar2',
           'mpi4py',
+          'cloudpickle'
       ],
       description="OpenAI baselines: high quality implementations of reinforcement learning algorithms",
       author="OpenAI",
