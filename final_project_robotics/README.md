@@ -1,6 +1,6 @@
-# DQL with NoisyNet
+# DQN-Baselines with NoisyNet
 
-This folder contains an extension of the [OpenAI baselines Deep Q-Learning](https://github.com/openai/baselines/8d03102d4dce8f5a64843492f5bd2c052251651b) implementing [NoisyNet](https://arxiv.org/pdf/1706.10295.pdf) as an replacement of $\epsilon$ -greedy exploration policy.
+This folder contains an extension of the [OpenAI baselines Deep Q-Learning](https://github.com/openai/baselines/) implementing [NoisyNet](https://arxiv.org/pdf/1706.10295.pdf) as an replacement of $\epsilon$ -greedy exploration policy.
 
 ## Installation
 
@@ -18,37 +18,26 @@ pip3 install -e .
 cd ..
 ```
 
-## Atari
+## Experiments
 
-Train a DQL agent on Atari. This will take hours even on a GPU. 
+In the `./experiments/` folder we defined some experiments to compare different exploration technology.
+$\epsilon$-*greedy* forms the baseline, more interestingly we run the similar but different agent noise techniques:
+*parameter noise* by *OpenAI* and *noisy network* by *Google DeepMind*.
 
-```
-# Create save folder
-mkdir models
-# Start training
-python3 -m baselines.deepq.experiments.atari.train --env=Breakout --save-dir=models
-```
-
-See `python3 -m baselines.deepq.experiments.atari.train --help` for more parameters.
-
-After training, you can enjoy the trained agent playing the game and store a video of it.
-
-```
-# Get latest model
-LATEST_MODEL=$(ls -vd models/model-* | tail -n1)
-echo "${LATEST_MODEL}"
-
-# Enjoy agent and record.
-python3 -m baselines.deepq.experiments.atari.enjoy --env=Breakout --model-dir=${LATEST_MODEL} --video=breakout.mp4
-```
+Simply run the files in the folder to reproduction, or simply have a look to the poster `./poster.pdf`.
 
 ## Development
 
 The `./baselines` folder contain only modified parts of the OpenAI baselines repository.
 See `./baselines/LICENCE` for their terms of use.
 
-Most modifications took place in the DQL implementation `./baselines/baselines/deepq`:
+### Important files
+In `./baselines/baselines/deepq`:
 
 - `simple.py` Q-Learning algorithm and interface
-- `models.py` Deep-Q-model implementation
-- `build_graph.py` Tensor graph combining Q-model with loss etc. 
+- `models.py` Deep-Q-model as multilayer perceptron
+- `build_graph.py` Tensor graph combining Q-model with exploration policy etc. 
+
+In `./baselines/baselines/common`:
+
+- `tf_util.py` Utilities (also noise layer definition)
