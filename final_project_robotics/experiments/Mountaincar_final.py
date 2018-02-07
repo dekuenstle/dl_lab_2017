@@ -18,15 +18,16 @@ def main():
 
 def run_config(env_name, run_name, **kwargs):
     with tf.Graph().as_default():
+        tf.set_random_seed(42)
         env = gym.make(env_name)    
         monitor = Monitor(env, env_name + '-' + run_name)
         env = monitor
-        model = deepq.models.mlp([64])
+        model = deepq.models.mlp([64], layer_norm = True, sigma0=0.4)
         act = deepq.learn(
             env,
             q_func=model,
             lr=1e-3,
-            max_timesteps=500000,
+            max_timesteps=200000,
             buffer_size=50000,
             exploration_fraction=0.1,
             exploration_final_eps=0.02,
