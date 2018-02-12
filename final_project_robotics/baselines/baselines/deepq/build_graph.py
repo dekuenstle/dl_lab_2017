@@ -316,7 +316,8 @@ def build_act_with_noisy_net(make_obs_ph, q_func, num_actions, scope="deepq", re
     with tf.variable_scope(scope, reuse=reuse):
         observations_ph = make_obs_ph("observation")
 
-        # update_eps_ph = tf.placeholder(tf.float32, (), name="update_eps")
+        # define variable dummy for enjoy
+        eps = tf.get_variable("eps", (), initializer=tf.constant_initializer(0))
 
         q_values = q_func(observations_ph.get(), num_actions, scope="q_func",
                           noisy_net=True)
