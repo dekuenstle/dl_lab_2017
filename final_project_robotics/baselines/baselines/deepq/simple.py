@@ -193,6 +193,7 @@ def learn(env,
         'make_obs_ph': make_obs_ph,
         'q_func': q_func,
         'num_actions': env.action_space.n,
+        'noisy_net': noisy_net
     }
 
     act = ActWrapper(act, act_params)

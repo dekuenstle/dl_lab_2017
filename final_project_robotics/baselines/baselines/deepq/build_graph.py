@@ -112,7 +112,7 @@ def default_param_noise_filter(var):
     return False
 
 
-def build_act(make_obs_ph, q_func, num_actions, scope="deepq", reuse=None):
+def build_act(make_obs_ph, q_func, num_actions, scope="deepq", reuse=None, noisy_net=False):
     """Creates the act function:
 
     Parameters
@@ -142,6 +142,10 @@ def build_act(make_obs_ph, q_func, num_actions, scope="deepq", reuse=None):
         function to select and action given observation.
 `       See the top of the file for details.
     """
+    # build noisy net if needed to load model
+    if noisy_net:
+        return build_act_with_noisy_net(make_obs_ph, q_func, num_actions, scope=scope, reuse=reuse)
+
     with tf.variable_scope(scope, reuse=reuse):
         observations_ph = make_obs_ph("observation")
         stochastic_ph = tf.placeholder(tf.bool, (), name="stochastic")
@@ -315,9 +319,6 @@ def build_act_with_noisy_net(make_obs_ph, q_func, num_actions, scope="deepq", re
     """
     with tf.variable_scope(scope, reuse=reuse):
         observations_ph = make_obs_ph("observation")
-
-        # define variable dummy for enjoy
-        eps = tf.get_variable("eps", (), initializer=tf.constant_initializer(0))
 
         q_values = q_func(observations_ph.get(), num_actions, scope="q_func",
                           noisy_net=True)
